@@ -1,0 +1,19 @@
+{
+  "name": "assembly-notebook",
+  "kind": "notebook",
+  "topic": "底层 / 体系结构",
+  "stack": "fasm 1.64 + Python（自研 8086 模拟器）",
+  "runtime": "shared/asm86.py（自造：8086 子集 + INT 21h/10h/16h + 虚拟文件系统）",
+  "items": "21 题",
+  "ci": "GitHub Actions（apt 装 fasm）",
+  "ci_status": "success",
+  "shared_reusable": [
+    "asm86.py：最小 8086 运行时（含 DOS 文件 API）",
+    "check.py：固定用例 + 随机对拍 + 屏幕/文件对拍壳",
+    "screen_png.py：把模拟器屏幕渲染成 PNG"
+  ],
+  "skills": ["study-repo"],
+  "docs": "workbench/docs/汇编题解工程化.md",
+  "status": "published",
+  "homepage": "https://github.com/jioshiyu/assembly-notebook"
+}
