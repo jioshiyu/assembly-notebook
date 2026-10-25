@@ -78,6 +78,11 @@ def run_one(prob: Path, stress: int, verbose: bool) -> dict:
         want_screen = getattr(ref, "expected_screen", None)
         if want_screen is not None and res["screen"] != want_screen(inp):
             fails.append((inp, f"screen={res['screen']!r} 期望={want_screen(inp)!r}"))
+        want_disk = getattr(ref, "expected_disk", None)
+        if want_disk is not None:
+            exp = want_disk(inp)
+            if res["files"] != exp:
+                fails.append((inp, f"文件系统不一致：{res['files']!r} 期望={exp!r}"))
         icount = max(icount, res["icount"])
         cycles = max(cycles, res["cycles"])
     stress_fail = 0

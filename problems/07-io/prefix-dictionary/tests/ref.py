@@ -1,13 +1,14 @@
-"""9.2 参考模型：内存版单词字典（忽略大小写、有序插入、去重、前缀查找）。
+"""9.2 参考模型：内存版单词字典 + **磁盘版（DICT.TXT 固定 32 字节记录）**。
 
-输入是空白分隔的命令流：1 <word> / 2 <prefix> / 3。
-输出与汇编版一致：每条命令一行（CRLF）。
+原版是磁盘字典（DICT.TXT + 临时文件 + 句柄）；这里的重写版把记录固定成 32 字节
+（词 + 0 填充），插入后整表覆盖写回，所以除了 stdout 还能对拍**文件内容**。
 """
 
 MAXLEN = 30
+RECLEN = 32
 
 
-def run(inp: str) -> list[str]:
+def _sim(inp: str):
     toks = inp.split()
     i = 0
     words: list[str] = []
@@ -33,11 +34,20 @@ def run(inp: str) -> list[str]:
             i += 1
             hits = [w for w in words if w.upper().startswith(p.upper())]
             out.append((" ".join(hits) + " ") if hits else "NONE")
-    return out
+    return words, out
 
 
 def expected(inp: str) -> str:
-    return "".join(line + "\r\n" for line in run(inp))
+    return "".join(line + "\r\n" for line in _sim(inp)[1])
+
+
+def expected_disk(inp: str) -> dict:
+    words, _ = _sim(inp)
+    buf = bytearray()
+    for w in words:
+        rec = w.encode("latin-1", "replace")[:RECLEN - 1]
+        buf += rec + b"\x00" * (RECLEN - len(rec))
+    return {"DICT.TXT": bytes(buf)}
 
 
 def gen(rng) -> str:
@@ -48,8 +58,8 @@ def gen(rng) -> str:
             w = "".join(rng.choice("abcAB") for _ in range(rng.randrange(1, 5)))
             cmds.append(f"1 {w}")
         elif r < 0.85:
-            p = "".join(rng.choice("abAB") for _ in range(rng.randrange(0, 3)))
-            cmds.append(f"2 {p}" if p else "2 A")
+            p = "".join(rng.choice("abAB") for _ in range(rng.randrange(1, 3)))
+            cmds.append(f"2 {p}")
         else:
             cmds.append("1 " + "x" * 31)
     cmds.append("3")

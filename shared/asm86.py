@@ -60,7 +60,11 @@ SREG = ["ES", "CS", "SS", "DS"]
 
 
 class Os:
-    """DOS/BIOS 的最小子集：屏幕 80x25、键盘脚本、DOS 输出。"""
+    """DOS/BIOS 的最小子集：屏幕 80x25、键盘脚本、DOS 输出、**虚拟文件系统**。
+
+    文件系统是内存里的字典（name -> bytearray）：测试完全封闭，不碰真磁盘；
+    需要看落盘效果时用 `dump_files()`。
+    """
 
     def __init__(self, stdin_text: str = ""):
         self.screen = [[" "] * 80 for _ in range(25)]
@@ -71,6 +75,9 @@ class Os:
         self.in_ptr = 0
         self.exit_code = None
         self.int_calls: list[str] = []
+        self.files: dict[str, bytearray] = {}
+        self.handles: dict[int, dict] = {}
+        self.next_handle = 5
 
     # ---- 键盘 ----
     def next_key(self):
@@ -84,6 +91,16 @@ class Os:
         if self.in_ptr >= len(self.input):
             return None
         return self.input[self.in_ptr]
+
+    # ---- 文件系统 ----
+    def open_handle(self, name: str, mode: int) -> int:
+        h = self.next_handle
+        self.next_handle += 1
+        self.handles[h] = {"name": name, "mode": mode, "pos": 0}
+        return h
+
+    def dump_files(self) -> dict[str, bytes]:
+        return {k: bytes(v) for k, v in self.files.items()}
 
     # ---- 屏幕 ----
     def put(self, ch, color=None):
@@ -381,6 +398,8 @@ class CPU:
                 self.mem[addr + 2 + i] = ord(ch)
         elif ah == 0x4C:
             raise _Exit(self.get8("AL"))
+        elif ah in (0x3C, 0x3D, 0x3E, 0x3F, 0x40, 0x41, 0x42):
+            self._dos_file(ah)
         elif ah == 0x2A:
             self.setr("CX", 2026)
             self.set8("DH", 10)
@@ -388,6 +407,89 @@ class CPU:
             self.set8("AL", 0)
         else:
             raise Abort(f"INT 21h AH={ah:02X}h 未实现")
+
+    def _read_asciiz(self, seg, off, limit=128) -> str:
+        addr = self.phys(seg, off)
+        out = []
+        for i in range(limit):
+            c = self.mem[(addr + i) & 0xFFFFF]
+            if c == 0:
+                break
+            out.append(chr(c))
+        return "".join(out)
+
+    def _dos_fail(self, code):
+        self.f["CF"] = 1
+        self.setr("AX", code)
+
+    def _dos_file(self, ah):
+        """INT 21h 文件子集：3C 创建 / 3D 打开 / 3E 关闭 / 3F 读 / 40 写 / 41 删除 / 42 定位。
+
+        文件存在内存里（`Os.files`），句柄从 5 开始——和真 DOS 一样，0–4 是标准设备。
+        """
+        os_ = self.os
+        ds = self.sreg["DS"]
+        if ah == 0x3C:                      # 创建（已存在则截断）
+            name = self._read_asciiz(ds, self.r_["DX"])
+            os_.files[name] = bytearray()
+            self.setr("AX", os_.open_handle(name, 1))
+            self.f["CF"] = 0
+        elif ah == 0x3D:                    # 打开
+            name = self._read_asciiz(ds, self.r_["DX"])
+            if name not in os_.files:
+                return self._dos_fail(2)    # 文件未找到
+            self.setr("AX", os_.open_handle(name, self.get8("AL")))
+            self.f["CF"] = 0
+        elif ah == 0x3E:                    # 关闭
+            os_.handles.pop(self.r_["BX"], None)
+            self.f["CF"] = 0
+        elif ah == 0x3F:                    # 读
+            h = os_.handles.get(self.r_["BX"])
+            if not h:
+                return self._dos_fail(6)
+            buf = os_.files[h["name"]]
+            n = max(0, min(self.r_["CX"], len(buf) - h["pos"]))
+            addr = self.phys(ds, self.r_["DX"])
+            for i in range(n):
+                self.mem[(addr + i) & 0xFFFFF] = buf[h["pos"] + i]
+            h["pos"] += n
+            self.setr("AX", n)
+            self.f["CF"] = 0
+        elif ah == 0x40:                    # 写
+            h = os_.handles.get(self.r_["BX"])
+            if not h:
+                return self._dos_fail(6)
+            buf = os_.files[h["name"]]
+            addr = self.phys(ds, self.r_["DX"])
+            n = self.r_["CX"]
+            data = bytes(self.mem[(addr + i) & 0xFFFFF] for i in range(n))
+            pos = h["pos"]
+            if pos > len(buf):
+                buf.extend(b"\x00" * (pos - len(buf)))
+            buf[pos:pos + n] = data
+            h["pos"] += n
+            self.setr("AX", n)
+            self.f["CF"] = 0
+        elif ah == 0x41:                    # 删除
+            name = self._read_asciiz(ds, self.r_["DX"])
+            if name not in os_.files:
+                return self._dos_fail(2)
+            del os_.files[name]
+            self.f["CF"] = 0
+        elif ah == 0x42:                    # 定位（AL=0 头/1 当前/2 尾）
+            h = os_.handles.get(self.r_["BX"])
+            if not h:
+                return self._dos_fail(6)
+            off = (self.r_["CX"] << 16) | self.r_["DX"]
+            if off & 0x80000000:
+                off -= 0x100000000
+            origin = self.get8("AL")
+            base = 0 if origin == 0 else h["pos"] if origin == 1 else len(os_.files[h["name"]])
+            newpos = max(0, base + off)
+            h["pos"] = newpos
+            self.setr("AX", newpos & 0xFFFF)
+            self.setr("DX", (newpos >> 16) & 0xFFFF)
+            self.f["CF"] = 0
 
     def _int10(self):
         ah = self.get8("AH")
@@ -1016,6 +1118,7 @@ def run_program(binary: bytes, stdin_text="", org=0x100, max_instr=MAX_INSTR_DEF
     return {
         "stdout": os_.text(),
         "screen": os_.screen_text(),
+        "files": os_.dump_files(),
         "regs": cpu.state(),
         "flags": dict(cpu.f),
         "icount": cpu.icount,

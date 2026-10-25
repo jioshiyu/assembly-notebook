@@ -12,6 +12,7 @@ use16
 org 100h
 
 MAIN:
+    call open_dict
     jmp main_loop
 
 ; ===================== 主循环 =====================
@@ -33,6 +34,11 @@ bye:
 
 ; ===================== 插入 =====================
 do_insert:
+    mov di, newword
+    mov al, 0
+    mov cx, 32
+    cld
+    rep stosb               ; 清空上一条，保证记录尾部补 0
     mov di, newword
     call read_word
     mov byte [di], 0            ; 补串尾
@@ -84,6 +90,7 @@ shift_done:
     cld
     rep movsb
     inc word [count]
+    call save_dict
     mov dx, msg_ok
     call put_str
     call put_crlf
@@ -209,6 +216,58 @@ prefix_match:
     mov ax, 1
     ret
 
+
+; ---- 启动：打开 DICT.TXT（不存在就创建），读进 words[] ----
+open_dict:
+    mov dx, fname
+    mov ax, 3D00h
+    int 21h
+    jnc .got
+    mov dx, fname
+    mov cx, 0
+    mov ah, 3Ch
+    int 21h
+    jc .done
+.got:
+    mov [dhandle], ax
+    mov bx, ax
+    mov cx, 1024
+    mov dx, words
+    mov ah, 3Fh
+    int 21h
+    mov [dbytes], ax
+    mov bx, [dhandle]
+    mov ah, 3Eh
+    int 21h
+    mov ax, [dbytes]
+    mov cl, 5
+    shr ax, cl              ; 字节数 / 32 = 记录数
+    mov [count], ax
+.done:
+    ret
+
+; ---- 插入后：把 words[] 覆盖写回 DICT.TXT ----
+save_dict:
+    mov dx, fname
+    mov cx, 0
+    mov ah, 3Ch
+    int 21h
+    jc .done
+    mov [dhandle], ax
+    mov bx, ax
+    mov ax, [count]
+    mov cl, 5
+    shl ax, cl              ; count * 32
+    mov cx, ax
+    mov dx, words
+    mov ah, 40h
+    int 21h
+    mov bx, [dhandle]
+    mov ah, 3Eh
+    int 21h
+.done:
+    ret
+
 include "../../../shared/io.inc"
 
 count dw 0
@@ -221,3 +280,6 @@ msg_ok db 'OK$'
 msg_dup db 'DUP$'
 msg_long db 'TOOLONG$'
 msg_none db 'NONE$'
+fname db 'DICT.TXT',0
+dhandle dw 0
+dbytes dw 0
