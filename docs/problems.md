@@ -3,6 +3,32 @@
 > 一栏一题：`分类/目录` · 练什么 · 原版做法 · 重写点 · 关键指令。
 > 复现：`python shared/check.py problems/<分类>/<目录> --stress 40`
 
+## 目录索引（21 个题目录，点进去有逐题 README）
+
+| 题目 | 分类 | 一句话 |
+|---|---|---|
+| [instruction-sampler](01-transfer/instruction-sampler/) | 01-transfer | 传送类指令合集（REP MOVSB / PUSH-POP / XLAT / 标志位） |
+| [add-with-carry](02-basic-ops/add-with-carry/) | 02-basic-ops | 8 位加法 + ADC 进位扩展 |
+| [mul-aam-decimal](02-basic-ops/mul-aam-decimal/) | 02-basic-ops | 8 位乘法 + AAM 十进制拆分 |
+| [negate-32bit](02-basic-ops/negate-32bit/) | 02-basic-ops | 32 位数取负（掩码技巧 vs 取反加一） |
+| [array-intersection](03-loop/array-intersection/) | 03-loop | 两个数组求交集（保持 A 的顺序） |
+| [bubble-sort-string](03-loop/bubble-sort-string/) | 03-loop | 冒泡排序一个字符串 |
+| [sign-partition-count](03-loop/sign-partition-count/) | 03-loop | 按符号分区并计数 |
+| [concat-two-strings](04-string/concat-two-strings/) | 04-string | REP MOVSB 拼接两个字符串 |
+| [hex-to-decimal](04-string/hex-to-decimal/) | 04-string | 16 位十六进制转 5 位十进制 |
+| [substring-search](04-string/substring-search/) | 04-string | REPE CMPSB 朴素子串查找 |
+| [delete-substring](05-subroutine/delete-substring/) | 05-subroutine | 删除第 N 位起的 M 个字符 |
+| [print-by-register](05-subroutine/print-by-register/) | 05-subroutine | 寄存器传参的子程序 |
+| [print-by-stack](05-subroutine/print-by-stack/) | 05-subroutine | 堆栈传参 + RET n 清栈 |
+| [print-hex-subroutine](05-subroutine/print-hex-subroutine/) | 05-subroutine | 子程序打印 16 位十六进制 + H |
+| [power-recursion](06-recursion/power-recursion/) | 06-recursion | 递归求幂 X^N |
+| [read-line-nested](06-recursion/read-line-nested/) | 06-recursion | 子程序嵌套：整行读入并回显 |
+| [prefix-dictionary](07-io/prefix-dictionary/) | 07-io | 单词字典：有序插入 + 去重 + 前缀查找 + 磁盘持久化 |
+| [window-notepad](07-io/window-notepad/) | 07-io | 带边框的记事窗口（30 字符换行 + 窗口内上卷） |
+| [addressing-modes](08-macro/addressing-modes/) | 08-macro | 六种寻址方式演示 |
+| [bitops-with-macros](08-macro/bitops-with-macros/) | 08-macro | 宏指令：位操作 + 宏版十六进制输出 |
+| [fibonacci-macro](08-macro/fibonacci-macro/) | 08-macro | 宏求斐波那契 + 十进制输出 |
+
 ## 01-transfer
 
 **instruction-sampler**（0.x 伪指令与传送类）

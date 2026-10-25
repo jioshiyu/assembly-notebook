@@ -79,6 +79,8 @@ python shared/screen_png.py problems/07-io/window-notepad     --input $'HELLO 80
 
 ![9.2 字典：有序插入、去重、前缀查找](docs/images/prefix-dictionary.png)
 
+每个题目录里都有 `README.md`（题意 / 原版做法 / 重写点 / 关键指令 / 测试边界 / 复现命令），从 [docs/problems.md 的目录索引](docs/problems.md) 可以直接跳进去。
+
 ## 质检三个层次
 
 1. **固定用例**：`tests/cases.json`，覆盖作业原题数值 + 边界（0、最大值、进位、回绕）；
