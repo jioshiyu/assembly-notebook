@@ -2,7 +2,7 @@
 
 8086 汇编课程作业整理：把散落在桌面的 8 个实验、21 个 `.asm` 变成**可编译、可执行、可对拍、可复现**的项目。
 
-> 和 [algorithm-notebook](https://github.com/jioshiyu/algorithm-notebook) 同一套方法论：一题一目录、参考模型当 oracle、随机对拍、方法沉淀。
+> 姊妹仓库：[algorithm-notebook](https://github.com/jioshiyu/algorithm-notebook)（算法题，有编译器当 oracle）——同一套方法论：一题一目录、参考模型当 oracle、随机对拍、方法沉淀；两者合起来是 `*-notebook` 系列，方法论见 workbench 的《题解仓库族》。
 > 区别在于汇编没有现成的"编译器 + 标准输出"——所以这里自带一个 **8086 模拟器**（`shared/asm86.py`）和一套 **DOS IO 例程**（`shared/io.inc`）。
 
 ## 为什么值得做
@@ -66,6 +66,18 @@ problems/<分类>/<slug>/
 | 06-recursion | read-line-nested · power-recursion | 嵌套调用 / 递归求幂 |
 | 07-io | window-notepad · prefix-dictionary | 屏幕窗口（对拍屏幕）/ 字典 |
 | 08-macro | bitops-with-macros · fibonacci-macro · addressing-modes | 宏 / 宏求斐波那契 / 六种寻址 |
+
+## 截图（图是产物，不只是输入）
+
+这些图由 `shared/screen_png.py` 从模拟器里**现场渲染**，不是手工截的——重新生成只要一条命令：
+
+```bash
+python shared/screen_png.py problems/07-io/window-notepad     --input $'HELLO 8086! abcdefghijklmnopqrstuvwxyz0123'     --out docs/images/window-notepad.png
+```
+
+![9.1 记事窗口：30 字符自动换行 + 窗口上卷](docs/images/window-notepad.png)
+
+![9.2 字典：有序插入、去重、前缀查找](docs/images/prefix-dictionary.png)
 
 ## 质检三个层次
 
