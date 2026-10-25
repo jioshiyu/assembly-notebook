@@ -12,8 +12,16 @@
     "check.py：固定用例 + 随机对拍 + 屏幕/文件对拍壳",
     "screen_png.py：把模拟器屏幕渲染成 PNG"
   ],
-  "skills": ["study-repo"],
+  "skills": [
+    "study-repo"
+  ],
   "docs": "workbench/docs/汇编题解工程化.md",
   "status": "published",
-  "homepage": "https://github.com/jioshiyu/assembly-notebook"
+  "homepage": "https://github.com/jioshiyu/assembly-notebook",
+  "topics": [
+    "notebook-family",
+    "assembly",
+    "8086",
+    "education"
+  ]
 }

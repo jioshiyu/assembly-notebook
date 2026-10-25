@@ -1,5 +1,7 @@
 # assembly-notebook
 
+[![ci](https://github.com/jioshiyu/assembly-notebook/actions/workflows/ci.yml/badge.svg)](https://github.com/jioshiyu/assembly-notebook/actions/workflows/ci.yml)
+
 8086 汇编课程作业整理：把散落在桌面的 8 个实验、21 个 `.asm` 变成**可编译、可执行、可对拍、可复现**的项目。
 
 > 姊妹仓库：[algorithm-notebook](https://github.com/jioshiyu/algorithm-notebook)（算法题，有编译器当 oracle）——同一套方法论：一题一目录、参考模型当 oracle、随机对拍、方法沉淀；两者合起来是 `*-notebook` 系列，方法论见 workbench 的《题解仓库族》。
