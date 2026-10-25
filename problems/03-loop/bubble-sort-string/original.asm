@@ -1,0 +1,62 @@
+; ===== 原始作业源码（照抄，MASM 语法，仅存档对照）=====
+.MODEL SMALL
+.STACK 100H
+
+.DATA
+    MAXLEN DB 80
+    ACTLEN DB 0
+    BUF DB 80 DUP('$')
+    PROMPT DB 'INPUT STRING: $'
+    RESULT DB 0DH,0AH,'SORTED STRING : $'
+    CRLF DB 0DH,0AH,'$'
+
+.CODE
+START:
+    MOV AX,@DATA
+    MOV DS,AX
+
+    LEA DX,PROMPT
+    MOV AH,9
+    INT 21H
+
+    LEA DX,MAXLEN
+    MOV AH,0AH
+    INT 21H
+
+    LEA DX,CRLF
+    MOV AH,9
+    INT 21H
+
+    MOV CH, 0
+    MOV CL, ACTLEN
+    JCXZ SORTED       
+    DEC CX
+    JCXZ SORTED       
+
+OUTER:
+    MOV BX, CX
+    LEA SI, BUF
+    
+INNER:
+    MOV AL, [SI]
+    CMP AL, [SI+1]
+    JLE NOSWAP
+    XCHG AL, [SI+1]
+    MOV [SI], AL
+NOSWAP:
+    INC SI
+    LOOP INNER
+    MOV CX, BX
+    LOOP OUTER
+
+SORTED:
+    LEA DX, RESULT
+    MOV AH, 9
+    INT 21H
+    LEA DX, BUF
+    MOV AH, 9
+    INT 21H
+
+    MOV AH, 4CH
+    INT 21H
+END START

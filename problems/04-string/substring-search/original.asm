@@ -1,0 +1,69 @@
+; ===== 原始作业源码（照抄，MASM 语法，仅存档对照）=====
+.MODEL SMALL
+.STACK 100H
+.DATA
+    SRC DB '1COOCOO$'
+    PATTERN DB 'COOL'
+    LEN_PAT EQU 4
+    FOUNDMSG DB 0DH,0AH,'FOUND!$'   
+    NOT_FOUNDMSG DB 0DH,0AH,'NOT FOUND!$'
+    
+.CODE   
+START:
+    MOV AX,@DATA
+    MOV DS,AX
+    MOV ES,AX
+    
+    LEA DI,SRC
+    MOV AL,'$'         
+    MOV CX,0
+    
+COUNT:  
+    SCASB
+    JZ COUNT_DONE
+    INC CX
+    JMP COUNT
+      
+COUNT_DONE:   
+    SUB CX,LEN_PAT
+    JC NOT_FOUND
+    INC CX
+    
+    LEA SI,SRC
+    LEA DI,PATTERN  
+    
+    LEA DX,SRC
+    MOV AH,9
+    INT 21H
+    
+SEARCH:
+    PUSH CX
+    PUSH SI
+    MOV CX,LEN_PAT
+    CLD
+    REPE CMPSB
+    JE FOUND
+    POP SI
+    INC SI
+    POP CX  
+    LEA DI,PATTERN
+    LOOP SEARCH
+    JMP NOT_FOUND
+    
+FOUND:
+    POP SI
+    POP CX
+    LEA DX,FOUNDMSG
+    JMP DISPLAY
+    
+NOT_FOUND:
+    LEA DX,NOT_FOUNDMSG
+    
+DISPLAY:
+    MOV AH,9
+    INT 21H
+    
+    MOV AH,4CH
+    INT 21H
+    
+END START

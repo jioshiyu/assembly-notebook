@@ -1,0 +1,8 @@
+[
+  {"input": "1COOCOOL COOL\n", "expect": "FOUND\r\n", "note": "作业题面变体：把 COOL 放进去"},
+  {"input": "1COOCOO COOL\n", "expect": "NOT FOUND\r\n", "note": "原版演示数据真实结果"},
+  {"input": "AAAA AA\n", "expect": "FOUND\r\n"},
+  {"input": "A B\n", "expect": "NOT FOUND\r\n"},
+  {"input": "AB AB\n", "expect": "FOUND\r\n", "note": "整串相同（候选只剩 1 个）"},
+  {"input": "AB A\n", "expect": "FOUND\r\n"}
+]

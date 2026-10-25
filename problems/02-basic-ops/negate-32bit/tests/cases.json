@@ -1,0 +1,7 @@
+[
+  {"input": "FFFB FFFF\n", "expect": "00000005\r\n", "note": "作业原题：-0FFFFFFFBh = 5"},
+  {"input": "0000 0000\n", "expect": "00000000\r\n"},
+  {"input": "0001 0000\n", "expect": "FFFFFFFF\r\n", "note": "-1"},
+  {"input": "1234 5678\n", "expect": "A987EDCC\r\n", "note": "原版掩码技巧在这里会给出错答案（高字最高位为 0）"},
+  {"input": "0000 8000\n", "expect": "80000000\r\n", "note": "0x80000000 取负仍是自身（补码回绕）"}
+]

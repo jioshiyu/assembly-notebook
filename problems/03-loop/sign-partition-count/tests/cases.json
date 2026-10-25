@@ -1,0 +1,7 @@
+[
+  {"input": "0A FB 03 FE 00 07 FF 08 FC 06 FD\n", "expect": "05 05\r\n", "note": "作业原题 10 个数：5 非负 5 负"},
+  {"input": "00\n", "expect": "00 00\r\n", "note": "空数组"},
+  {"input": "01 00\n", "expect": "01 00\r\n", "note": "0 算非负"},
+  {"input": "02 80 7F\n", "expect": "01 01\r\n", "note": "-128 / +127 边界"},
+  {"input": "03 FF FF FF\n", "expect": "00 03\r\n"}
+]

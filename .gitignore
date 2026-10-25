@@ -1,0 +1,6 @@
+# 构建产物与本地缓存
+build/
+__pycache__/
+*.pyc
+*.log
+_scratch/

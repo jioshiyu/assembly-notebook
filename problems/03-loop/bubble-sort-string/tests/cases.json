@@ -1,0 +1,7 @@
+[
+  {"input": "cab\n", "expect": "abc\r\n"},
+  {"input": "ABCDEF\n", "expect": "ABCDEF\r\n", "note": "已有序（原版也要跑完整轮）"},
+  {"input": "FEDCBA\n", "expect": "ABCDEF\r\n", "note": "完全逆序"},
+  {"input": "9A8b\n", "expect": "89Ab\r\n", "note": "ASCII：8<9<A<b"},
+  {"input": "a\n", "expect": "a\r\n", "note": "单字符"}
+]

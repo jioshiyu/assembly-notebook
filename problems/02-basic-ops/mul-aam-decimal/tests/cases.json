@@ -1,0 +1,6 @@
+[
+  {"input": "08 07\n", "expect": "0506\r\n", "note": "作业原题：8*7=56 → AH=5,AL=6"},
+  {"input": "00 00\n", "expect": "0000\r\n"},
+  {"input": "0F 0F\n", "expect": "1605\r\n", "note": "15*15=225：AH=22(0x16), AL=5 —— BCD 对 >9 的数并不合法"},
+  {"input": "FF FF\n", "expect": "0001\r\n", "note": "255*255 取低字节=1 → AH=0,AL=1"}
+]

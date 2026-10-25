@@ -1,0 +1,64 @@
+; ===== 原始作业源码（照抄，MASM 语法，仅存档对照）=====
+.MODEL SMALL
+.STACK 100H
+.DATA
+    ARRAYM DB -5,3,-2,0,7,-1,8,-4,6,-3
+    ARRAYP DB 10 DUP(0)
+    ARRAYN DB 10 DUP(0)
+    COUNTP DB 0
+    COUNTN DB 0
+    MSGP DB 'NON-NEGATIVE COUUNT: $'
+    MSGN DB 0DH,0AH,'NEGATIVE COUNT : $'
+    
+.CODE
+START:
+    MOV AX,@DATA
+    MOV DS,AX   
+    
+    LEA SI,ARRAYM
+    LEA DI,ARRAYP
+    LEA BX,ARRAYN
+    MOV CX,10
+    
+NEXT:
+    MOV AL,[SI]
+    CMP AL,0
+    JL NEGATIVE
+    MOV [DI],AL
+    INC DI
+    INC COUNTP
+    JMP CONTINUE
+    
+NEGATIVE:
+    MOV [BX],AL
+    INC BX
+    INC COUNTN 
+    
+CONTINUE:
+    INC SI
+    LOOP NEXT
+    
+    LEA DX,MSGP
+    MOV AH,9
+    INT 21H
+    
+    MOV AL,COUNTP
+    ADD AL,'0'
+    MOV DL,AL
+    MOV AH,2
+    INT 21H
+    
+    LEA DX,MSGN
+    MOV AH,9
+    INT 21H
+    
+    MOV AL,COUNTN
+    ADD AL,'0'
+    MOV DL,AL
+    MOV AH,2
+    INT 21H
+    
+    MOV AH,4CH
+    INT 21H
+
+END START

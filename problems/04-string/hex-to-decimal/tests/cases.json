@@ -1,0 +1,7 @@
+[
+  {"input": "8C5E\n", "expect": "35934\r\n", "note": "作业原题数值"},
+  {"input": "0000\n", "expect": "00000\r\n"},
+  {"input": "FFFF\n", "expect": "65535\r\n", "note": "最大值"},
+  {"input": "000A\n", "expect": "00010\r\n"},
+  {"input": "2710\n", "expect": "10000\r\n", "note": "刚好 5 位"}
+]

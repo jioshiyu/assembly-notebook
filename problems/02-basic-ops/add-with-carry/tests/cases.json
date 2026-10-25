@@ -1,0 +1,7 @@
+[
+  {"input": "93 78\n", "expect": "010B\r\n", "note": "作业原题：93H + 78H，CF=1"},
+  {"input": "00 00\n", "expect": "0000\r\n"},
+  {"input": "FF 01\n", "expect": "0100\r\n", "note": "进位边界"},
+  {"input": "FF FF\n", "expect": "01FE\r\n"},
+  {"input": "0F 0F\n", "expect": "001E\r\n", "note": "半字节进位（AF）"}
+]

@@ -1,0 +1,6 @@
+[
+  {"input": "HELLO WORLD\n", "expect": "HELLOWORLD\r\n", "note": "作业原题"},
+  {"input": "A B\n", "expect": "AB\r\n"},
+  {"input": "ABC ABC\n", "expect": "ABCABC\r\n"},
+  {"input": "0123456789 Z\n", "expect": "0123456789Z\r\n", "note": "长度不等"}
+]
