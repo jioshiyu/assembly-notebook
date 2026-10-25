@@ -1,0 +1,9 @@
+[
+  {"input": "0004\n", "expect": "3\r\n", "note": "作业原题 F(4)=3"},
+  {"input": "0003\n", "expect": "2\r\n", "note": "作业原题 F(3)=2"},
+  {"input": "0002\n", "expect": "1\r\n", "note": "原版在这里死循环（sub cx,2 后 LOOP 变成 65535 次）"},
+  {"input": "0001\n", "expect": "1\r\n"},
+  {"input": "0000\n", "expect": "1\r\n", "note": "宏的 DONE 分支对 N<=1 返回 1"},
+  {"input": "000A\n", "expect": "55\r\n", "note": "F(10)=55"},
+  {"input": "0018\n", "expect": "46368\r\n", "note": "F(24)=46368，16 位内最大"}
+]

@@ -1,0 +1,7 @@
+[
+  {"input": "1 cat 1 dog 1 cow 2 c 3\n", "expect": "OK\r\nOK\r\nOK\r\ncat cow \r\n", "note": "有序插入 + 前缀命中"},
+  {"input": "1 cat 1 Cat 3\n", "expect": "OK\r\nDUP\r\n", "note": "忽略大小写去重"},
+  {"input": "2 A 3\n", "expect": "NONE\r\n", "note": "空字典"},
+  {"input": "1 apple 1 apricot 1 banana 2 ap 2 b 2 z 3\n", "expect": "OK\r\nOK\r\nOK\r\napple apricot \r\nbanana \r\nNONE\r\n"},
+  {"input": "1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 3\n", "expect": "TOOLONG\r\n", "note": "31 字符超长"}
+]

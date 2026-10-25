@@ -1,0 +1,7 @@
+[
+  {"input": "845E\n", "expect": "845EH\r\n", "note": "作业原题：1000110001011110B = 845Eh"},
+  {"input": "0000\n", "expect": "0000H\r\n"},
+  {"input": "0009\n", "expect": "0009H\r\n", "note": "数字/字母分界前"},
+  {"input": "000A\n", "expect": "000AH\r\n", "note": "补 7 跳到 'A'"},
+  {"input": "FFFF\n", "expect": "FFFFH\r\n"}
+]

@@ -1,0 +1,6 @@
+[
+  {"input": "08 7F\n", "expect": "COPY=12345678\r\nPUSH_POP=0435\r\nXLAT=12\r\nADD=80 CF=00 OF=01 SF=01\r\n", "note": "作业原题：查表下标 8、7FH+1 溢出到 80H"},
+  {"input": "00 01\n", "expect": "COPY=12345678\r\nPUSH_POP=0435\r\nXLAT=18\r\nADD=02 CF=00 OF=00 SF=00\r\n"},
+  {"input": "0A FF\n", "expect": "COPY=12345678\r\nPUSH_POP=0435\r\nXLAT=34\r\nADD=00 CF=01 OF=00 SF=00\r\n", "note": "下标 10 回绕到 1；FFH+1 全零进位"},
+  {"input": "03 00\n", "expect": "COPY=12345678\r\nPUSH_POP=0435\r\nXLAT=06\r\nADD=01 CF=00 OF=00 SF=00\r\n"}
+]

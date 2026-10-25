@@ -1,0 +1,57 @@
+; ===== 原始作业源码（照抄，MASM 语法，仅存档对照）=====
+.MODEL SMALL
+.STACK 100H
+.DATA 
+    BUFFER DB 80 DUP(0)
+    MSG DB 'ENTER STRING:$'
+    CRLF DB 0DH,0AH,'$'
+.CODE
+READCHAR PROC
+    MOV AH,1
+    INT 21H
+    RET
+READCHAR ENDP
+
+READSTRING PROC
+    PUSH AX
+    PUSH DI
+    MOV CX,0
+READ_LOOP:
+    CALL READCHAR
+    CMP AL,0DH
+    JE DONE
+    STOSB
+    INC CX
+    JMP READ_LOOP
+DONE:
+    MOV AL,'$'
+    STOSB
+    POP DI
+    POP AX           
+    RET    
+READSTRING ENDP
+
+START:
+     MOV AX,@DATA
+     MOV DS,AX 
+     MOV ES,AX
+     
+     LEA DX,MSG
+     MOV AH,9
+     INT 21H
+     
+     LEA DI,BUFFER
+     CALL READSTRING  
+     
+     LEA DX,CRLF
+     MOV AH,9
+     INT 21H 
+     
+     LEA DX,BUFFER
+     MOV AH,9
+     INT 21H
+     
+     MOV AH,4CH
+     INT 21H
+
+END START

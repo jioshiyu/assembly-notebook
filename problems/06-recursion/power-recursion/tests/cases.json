@@ -1,0 +1,8 @@
+[
+  {"input": "03 05\n", "expect": "243\r\n", "note": "作业原题：3^5"},
+  {"input": "03 06\n", "expect": "729\r\n", "note": "原版 MUL BL 在这里就错了（>255）"},
+  {"input": "00 00\n", "expect": "1\r\n", "note": "0^0 按递归基返回 1"},
+  {"input": "00 05\n", "expect": "0\r\n"},
+  {"input": "02 10\n", "expect": "0\r\n", "note": "2^16 mod 2^16 = 0"},
+  {"input": "FF 02\n", "expect": "65025\r\n", "note": "255^2 mod 65536"}
+]

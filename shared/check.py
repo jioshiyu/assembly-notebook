@@ -44,7 +44,7 @@ def find_problems(paths) -> list[Path]:
     if paths:
         out = []
         for p in paths:
-            p = Path(p)
+            p = Path(p).resolve()
             if (p / "main.asm").exists():
                 out.append(p)
             else:
@@ -75,6 +75,9 @@ def run_one(prob: Path, stress: int, verbose: bool) -> dict:
             want = ref.expected(inp)
         if res["stdout"] != want:
             fails.append((inp, f"stdout={res['stdout']!r} 期望={want!r}"))
+        want_screen = getattr(ref, "expected_screen", None)
+        if want_screen is not None and res["screen"] != want_screen(inp):
+            fails.append((inp, f"screen={res['screen']!r} 期望={want_screen(inp)!r}"))
         icount = max(icount, res["icount"])
         cycles = max(cycles, res["cycles"])
     stress_fail = 0

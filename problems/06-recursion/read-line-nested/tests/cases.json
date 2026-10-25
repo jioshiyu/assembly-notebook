@@ -1,0 +1,6 @@
+[
+  {"input": "HELLO WORLD\n", "expect": "HELLO WORLD\r\n", "note": "带空格的整行"},
+  {"input": "A\n", "expect": "A\r\n"},
+  {"input": "  LEADING SPACES\n", "expect": "  LEADING SPACES\r\n", "note": "前导空格不丢"},
+  {"input": "0123456789\n", "expect": "0123456789\r\n"}
+]

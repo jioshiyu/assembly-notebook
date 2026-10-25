@@ -54,19 +54,18 @@ problems/<分类>/<slug>/
 
 ## 题目总表
 
-**9 / 21 已完成**（剩余：6.x 子程序 4 题、7.x 嵌套递归 2 题、9.x 输入输出 2 题、10.x 宏 3 题、0.x 伪指令 1 题）
+**21 / 21 全部完成**（8 个实验，去标识化后按章节/指令族归类；逐题说明见 [`docs/problems.md`](docs/problems.md)）
 
-| 分类 | 题 | 练什么 | 状态 |
-|---|---|---|---|
-| 02-basic-ops | add-with-carry | ADD/ADC 进位扩展 | ✅ |
-| 02-basic-ops | mul-aam-decimal | MUL + AAM 十进制拆分 | ✅ |
-| 02-basic-ops | negate-32bit | SBB 掩码 vs 取反加一 | ✅ |
-| 03-loop | sign-partition-count | 循环 + 分支 + 计数 | ✅ |
-| 03-loop | array-intersection | 双重循环求交集 | ✅ |
-| 03-loop | bubble-sort-string | 冒泡排序 + XCHG | ✅ |
-| 04-string | concat-two-strings | REP MOVSB / STOSB | ✅ |
-| 04-string | substring-search | SCASB 测长 + REPE CMPSB | ✅ |
-| 04-string | hex-to-decimal | DIV 取余 + LODSB/STOSB | ✅ |
+| 分类 | 题目 | 练什么 |
+|---|---|---|
+| 01-transfer | instruction-sampler | REP MOVSB / PUSH-POP / XLAT / 标志位 |
+| 02-basic-ops | add-with-carry · mul-aam-decimal · negate-32bit | ADC 进位 / MUL+AAM / 32 位取负 |
+| 03-loop | sign-partition-count · array-intersection · bubble-sort-string | 计数 / 交集 / 冒泡 |
+| 04-string | concat-two-strings · substring-search · hex-to-decimal | MOVSB / CMPSB / DIV 转十进制 |
+| 05-subroutine | print-by-register · print-by-stack · print-hex-subroutine · delete-substring | 传参两种方式 / 子程序 / 删除子串 |
+| 06-recursion | read-line-nested · power-recursion | 嵌套调用 / 递归求幂 |
+| 07-io | window-notepad · prefix-dictionary | 屏幕窗口（对拍屏幕）/ 字典 |
+| 08-macro | bitops-with-macros · fibonacci-macro · addressing-modes | 宏 / 宏求斐波那契 / 六种寻址 |
 
 ## 质检三个层次
 

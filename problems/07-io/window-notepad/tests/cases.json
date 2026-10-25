@@ -1,0 +1,6 @@
+[
+  {"input": "abc\u001b", "note": "三个字符打在第 18 行"},
+  {"input": "abcdefghijklmnopqrstuvwxyzABCDE\u001b", "note": "31 个字符：满 30 先换行，窗口上卷"},
+  {"input": "abc\rdef\u001b", "note": "回车后窗口上卷一行"},
+  {"input": "\u001b", "note": "立刻 ESC：屏幕全空"}
+]

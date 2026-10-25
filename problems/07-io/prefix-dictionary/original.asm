@@ -1,0 +1,898 @@
+; ===== 原始作业源码（照抄，MASM 语法；由 GBK 转 UTF-8；仅存档对照，不参与编译）=====
+.MODEL SMALL
+.STACK 1000H
+
+; 宏定义
+SCROLL  MACRO   N, ULR, ULC, LRR, LRC, ATT
+        MOV     AH, 6
+        MOV     AL, N
+        MOV     CH, ULR
+        MOV     CL, ULC
+        MOV     DH, LRR
+        MOV     DL, LRC
+        MOV     BH, ATT
+        INT     10H
+        ENDM
+
+CURSE   MACRO   CURY, CURX
+        MOV     AH, 2
+        MOV     DH, CURY
+        MOV     DL, CURX
+        MOV     BH, 0
+        INT     10H
+        ENDM
+
+.DATA
+    ; 菜单与提示字符串
+    MENU1         DB '1. Insert word$'
+    MENU2         DB '2. Search (prefix)$'
+    MENU3         DB '3. Exit$'
+    MENU4         DB '4. Create file$'
+    PROMPT_WORD   DB 'Word: $'
+    PROMPT_DEF    DB 'Definition: $'
+    PROMPT_SEARCH DB 'Search prefix: $'
+    MSG_INSERTED  DB 'Inserted.$'
+    MSG_EXISTS    DB 'Word already exists!$'
+    MSG_NOTFOUND  DB 'No matching words.$'
+    MSG_ERROR     DB 'File error!$'
+    MSG_TOOLONG   DB 'Too long (max 199).$'
+    MSG_CREATED   DB 'File created.$'
+    MSG_PRESSKEY  DB 'Press any key...$'
+    CRLF          DB 13, 10, '$'
+
+    FNAME         DB 'DICT.TXT', 0
+    TMPNAME       DB 'TMP.TXT', 0
+    HANDLE        DW ?        ; 主文件句柄
+    TMP_HANDLE    DW ?        ; 临时文件句柄
+    CHK_HANDLE    DW ?        ; 查重专用句柄
+
+    WORD_BUF      DB 51 DUP(0)
+    DEF_BUF       DB 201 DUP(0)
+    FULL_BUF      DB 256 DUP(0)
+    TEMP_CHAR     DB 0
+    LINE_BUF      DB 256 DUP(0)
+    NEWLINE_LEN   DW ?
+    INSERTED_FLAG DB 0
+
+.CODE
+PRINT PROC
+    MOV AH, 09H
+    INT 21H
+    RET
+PRINT ENDP
+
+WIN_NEWLINE PROC
+    PUSH AX
+    PUSH DX
+    MOV AH, 3
+    MOV BH, 0
+    INT 10H
+    CMP DH, 18
+    JL NOT_BOTTOM
+    SCROLL 1, 8, 20, 18, 50, 2FH
+    CURSE 18, 20
+    JMP WN_DONE
+NOT_BOTTOM:
+    INC DH
+    CURSE DH, 20
+WN_DONE:
+    POP DX
+    POP AX
+    RET
+WIN_NEWLINE ENDP
+
+WAITKEY PROC
+    MOV AH, 0
+    INT 16H
+    CMP AL, 0
+    JE WAITKEY
+    CMP AL, 0E0H
+    JE WAITKEY
+    RET
+WAITKEY ENDP
+
+;新增：通用窗口暂停过程
+; 功能：换行 + 显示 Press any key + 等待按键
+; 自动保护 AX/DX，不破坏调用者寄存器
+WIN_PAUSE PROC
+    PUSH AX
+    PUSH DX
+    CALL WIN_NEWLINE
+    LEA DX, MSG_PRESSKEY
+    CALL PRINT
+    CALL WAITKEY
+    POP DX
+    POP AX
+    RET
+WIN_PAUSE ENDP
+
+
+STRLEN PROC
+    PUSH SI
+    XOR CX, CX
+LENLP:
+    CMP BYTE PTR [SI], 0
+    JE STRLEN_END
+    INC SI
+    INC CX
+    JMP LENLP
+STRLEN_END:
+    POP SI
+    RET
+STRLEN ENDP
+
+STRCPY PROC
+    PUSH AX
+    PUSH SI
+CPYLP:
+    MOV AL, [SI]
+    MOV [DI], AL
+    INC SI
+    INC DI
+    CMP AL, 0
+    JNE CPYLP
+    POP SI
+    POP AX
+    RET
+STRCPY ENDP
+
+TOUPPER PROC
+    CMP AL, 'a'
+    JB TU_RET
+    CMP AL, 'z'
+    JA TU_RET
+    SUB AL, 20H
+TU_RET:
+    RET
+TOUPPER ENDP
+
+; 不区分大小写字符串比较
+; 返回：AX=0 相等；AX=-1 SI<DI；AX=1 SI>DI
+STRCMPCI PROC
+    PUSH SI
+    PUSH DI
+    PUSH BX
+    PUSH CX
+
+CMP_LOOP:
+    MOV AL, [SI]
+    CALL TOUPPER
+    MOV AH, AL
+
+    MOV AL, [DI]
+    CALL TOUPPER
+
+    CMP AH, AL
+    JB  CMP_LESS
+    JA  CMP_GREATER
+
+    CMP AH, 0
+    JE  CMP_EQUAL
+
+    INC SI
+    INC DI
+    JMP CMP_LOOP
+
+CMP_LESS:
+    MOV AX, -1
+    JMP CMP_DONE
+CMP_GREATER:
+    MOV AX, 1
+    JMP CMP_DONE
+CMP_EQUAL:
+    XOR AX, AX
+CMP_DONE:
+    POP CX
+    POP BX
+    POP DI
+    POP SI
+    RET
+STRCMPCI ENDP
+
+ISPREFIX PROC
+    PUSH SI
+    PUSH DI
+    PUSH AX
+    PUSH BX
+PRELP:
+    MOV AL, [DI]
+    CMP AL, 0
+    JE PREMATCH
+    MOV BL, [SI]
+    CMP BL, 0
+    JE PREFAIL
+
+    CALL TOUPPER
+    MOV AH, AL
+    MOV AL, BL
+    CALL TOUPPER
+    CMP AH, AL
+    JNE PREFAIL
+
+    INC SI
+    INC DI
+    JMP PRELP
+PREMATCH:
+    STC
+    JMP PRE_DONE
+PREFAIL:
+    CLC
+PRE_DONE:
+    POP BX
+    POP AX
+    POP DI
+    POP SI
+    RET
+ISPREFIX ENDP
+
+EXTRACT PROC
+    PUSH AX
+    PUSH SI
+EXLP:
+    MOV AL, [SI]
+    CMP AL, ' '
+    JE EX_DONE
+    CMP AL, 0
+    JE EX_DONE
+    MOV [DI], AL
+    INC SI
+    INC DI
+    JMP EXLP
+EX_DONE:
+    MOV BYTE PTR [DI], 0
+    POP SI
+    POP AX
+    RET
+EXTRACT ENDP
+
+WININPUT PROC
+    PUSH AX
+    PUSH BX
+    PUSH CX
+    PUSH DX
+    PUSH DI
+    MOV DI, SI
+    XOR BX, BX
+INLP:
+    MOV AH, 0
+    INT 16H
+    CMP AL, 0
+    JE INLP
+    CMP AL, 0E0H
+    JE INLP
+    CMP AL, 0DH
+    JE IN_ENTER
+    CMP AL, 08H
+    JE IN_BACK
+    CMP AL, 1BH
+    JE IN_ESC
+    CMP BX, CX
+    JAE INLP
+    MOV [DI], AL
+    INC DI
+    INC BX
+    MOV DL, AL
+    MOV AH, 2
+    INT 21H
+    JMP INLP
+IN_BACK:
+    CMP BX, 0
+    JE INLP
+    DEC BX
+    DEC DI
+    MOV DL, 08H
+    MOV AH, 2
+    INT 21H
+    MOV DL, ' '
+    INT 21H
+    MOV DL, 08H
+    INT 21H
+    JMP INLP
+IN_ESC:
+    MOV BYTE PTR [SI], 0
+    JMP IN_EXIT
+IN_ENTER:
+    MOV BYTE PTR [DI], 0
+    MOV DL, 0DH
+    MOV AH, 2
+    INT 21H
+    MOV DL, 0AH
+    INT 21H
+IN_EXIT:
+    POP DI
+    POP DX
+    POP CX
+    POP BX
+    POP AX
+    RET
+WININPUT ENDP
+
+; 读取一行到 LINE_BUF，输入 BX=文件句柄，返回 AX=1 成功 AX=0 文件结束
+READ_LINE PROC
+    PUSH CX
+    PUSH DX
+    PUSH DI
+    LEA DI, LINE_BUF
+    XOR CX, CX
+
+RL_LOOP:
+    MOV AH, 3FH
+    MOV CX, 1
+    LEA DX, TEMP_CHAR
+    INT 21H
+    JC RL_ERR
+    CMP AX, 0
+    JE RL_EOF
+
+    MOV AL, [TEMP_CHAR]
+    CMP AL, 0AH
+    JE RL_END
+    CMP AL, 0DH
+    JE RL_LOOP
+
+    CMP CX, 198
+    JAE RL_LOOP
+    MOV [DI], AL
+    INC DI
+    INC CX
+    JMP RL_LOOP
+
+RL_END:
+    MOV BYTE PTR [DI], 0
+    MOV AX, 1
+    JMP RL_DONE
+RL_EOF:
+    MOV BYTE PTR [DI], 0
+    MOV AX, 0
+    JMP RL_DONE
+RL_ERR:
+    MOV AX, 0
+RL_DONE:
+    POP DI
+    POP DX
+    POP CX
+    RET
+READ_LINE ENDP
+
+; 写一行到临时文件
+WRITE_LINE PROC
+    PUSH AX
+    PUSH BX
+    PUSH CX
+    PUSH DX
+    PUSH SI
+
+    LEA SI, LINE_BUF
+    CALL STRLEN
+
+    MOV AH, 40H
+    MOV BX, TMP_HANDLE
+    MOV DX, SI
+    INT 21H
+
+    MOV AH, 40H
+    MOV CX, 2
+    LEA DX, CRLF
+    INT 21H
+
+    POP SI
+    POP DX
+    POP CX
+    POP BX
+    POP AX
+    RET
+WRITE_LINE ENDP
+
+; 写新单词行到临时文件
+WRITE_NEW_LINE PROC
+    PUSH AX
+    PUSH BX
+    PUSH CX
+    PUSH DX
+
+    MOV AH, 40H
+    MOV BX, TMP_HANDLE
+    MOV CX, NEWLINE_LEN
+    LEA DX, FULL_BUF
+    INT 21H
+
+    MOV AH, 40H
+    MOV CX, 2
+    LEA DX, CRLF
+    INT 21H
+
+    POP DX
+    POP CX
+    POP BX
+    POP AX
+    RET
+WRITE_NEW_LINE ENDP
+
+; 检查单词是否已存在（使用独立句柄）
+; 返回：CF=1 存在，CF=0 不存在
+CHECK_DUP PROC
+    PUSH AX
+    PUSH BX
+    PUSH CX
+    PUSH DX
+    PUSH SI
+    PUSH DI
+    PUSH BP
+
+    MOV AH, 3DH
+    MOV AL, 0
+    LEA DX, FNAME
+    INT 21H
+    JC CHK_OPEN_ERR
+
+    MOV CHK_HANDLE, AX
+CHK_READ_LINE:
+    MOV BX, CHK_HANDLE
+    CALL READ_LINE
+    CMP AX, 0
+    JE CHK_EOF
+
+    LEA SI, LINE_BUF
+    LEA DI, DEF_BUF
+    CALL EXTRACT
+
+    LEA SI, WORD_BUF
+    LEA DI, DEF_BUF
+    CALL STRCMPCI
+    CMP AX, 0
+    JE CHK_FOUND
+    JMP CHK_READ_LINE
+
+CHK_FOUND:
+    MOV AH, 3EH
+    MOV BX, CHK_HANDLE
+    INT 21H
+    STC
+    JMP CHK_RET
+
+CHK_EOF:
+    MOV AH, 3EH
+    MOV BX, CHK_HANDLE
+    INT 21H
+    CLC
+    JMP CHK_RET
+
+CHK_OPEN_ERR:
+    CLC
+CHK_RET:
+    POP BP
+    POP DI
+    POP SI
+    POP DX
+    POP CX
+    POP BX
+    POP AX
+    RET
+CHECK_DUP ENDP
+
+; 核心：临时文件+覆盖写入 最终修复版 
+; 返回：CF=0 成功 AX=0；CF=1 失败 AX=错误码(1存在/2过长/3文件错误)
+INSERT_CORE PROC
+    PUSH BX
+    PUSH CX
+    PUSH DX
+    PUSH SI
+    PUSH DI
+
+    ; 1. 构造完整行：单词 + 空格 + 释义
+    LEA SI, WORD_BUF
+    LEA DI, FULL_BUF
+    CALL STRCPY
+    DEC DI
+    MOV BYTE PTR [DI], ' '
+    INC DI
+    LEA SI, DEF_BUF
+    CALL STRCPY
+
+    ; 2. 检查行长度
+    LEA SI, FULL_BUF
+    CALL STRLEN
+    CMP CX, 199
+    JA TOO_LONG
+    MOV NEWLINE_LEN, CX
+
+    ; 3. 查重
+    CALL CHECK_DUP
+    JC DUP_EXITS
+
+    ; 4. 清理旧临时文件，创建新临时文件
+    MOV AH, 41H
+    LEA DX, TMPNAME
+    INT 21H
+
+    MOV AH, 3CH
+    MOV CX, 0
+    LEA DX, TMPNAME
+    INT 21H
+    JC INS_ERR_RET
+    MOV TMP_HANDLE, AX
+
+    ; 5. 打开原词典文件
+    MOV AH, 3DH
+    MOV AL, 0
+    LEA DX, FNAME
+    INT 21H
+    JC INS_NO_OLD_FILE  ; 文件不存在，跳专属分支
+    MOV HANDLE, AX
+
+    MOV INSERTED_FLAG, 0
+
+INS_LOOP:
+    ; 读一行
+    MOV BX, HANDLE
+    CALL READ_LINE
+    CMP AX, 0
+    JE INS_END_OF_FILE
+
+    ; 提取当前行单词
+    LEA SI, LINE_BUF
+    LEA DI, DEF_BUF
+    CALL EXTRACT
+
+    ; 比较：新单词 < 当前行单词？
+    LEA SI, WORD_BUF
+    LEA DI, DEF_BUF
+    CALL STRCMPCI
+    CMP AX, -1
+    JE INS_INSERT_HERE
+
+    ; 新单词更大，先写当前行到临时文件
+    CALL WRITE_LINE
+    JMP INS_LOOP
+
+INS_INSERT_HERE:
+    ; 插入新行
+    CALL WRITE_NEW_LINE
+    MOV INSERTED_FLAG, 1
+    ; 把当前行也写进去
+    CALL WRITE_LINE
+    JMP INS_COPY_REST
+
+INS_END_OF_FILE:
+    ; 文件读完还没插入，就插到末尾
+    CMP INSERTED_FLAG, 1
+    JE INS_CLOSE_OLD
+    CALL WRITE_NEW_LINE
+    JMP INS_CLOSE_OLD
+
+INS_COPY_REST:
+    ; 复制剩余所有行
+    MOV BX, HANDLE
+    CALL READ_LINE
+    CMP AX, 0
+    JE INS_CLOSE_OLD
+    CALL WRITE_LINE
+    JMP INS_COPY_REST
+
+; 原文件不存在的分支：直接写新行到临时文件
+INS_NO_OLD_FILE:
+    CALL WRITE_NEW_LINE
+    ; 关闭临时文件
+    MOV AH, 3EH
+    MOV BX, TMP_HANDLE
+    INT 21H
+    JMP INS_COVER_WRITE
+
+INS_CLOSE_OLD:
+    ; 关闭原文件
+    MOV AH, 3EH
+    MOV BX, HANDLE
+    INT 21H
+    ; 关闭临时文件
+    MOV AH, 3EH
+    MOV BX, TMP_HANDLE
+    INT 21H
+
+; 核心修复：覆盖写入原文件，替代删除+重命名
+INS_COVER_WRITE:
+    ; 打开临时文件，只读
+    MOV AH, 3DH
+    MOV AL, 0
+    LEA DX, TMPNAME
+    INT 21H
+    JC INS_ERR_RET
+    MOV TMP_HANDLE, AX
+
+    ; 创建（覆盖）原文件，已存在会自动清空
+    MOV AH, 3CH
+    MOV CX, 0
+    LEA DX, FNAME
+    INT 21H
+    JC INS_CLOSE_TMP
+    MOV HANDLE, AX
+
+COPY_LOOP:
+    ; 从临时文件读一块
+    MOV AH, 3FH
+    MOV BX, TMP_HANDLE
+    MOV CX, 256
+    LEA DX, LINE_BUF
+    INT 21H
+    JC INS_CLOSE_BOTH
+    CMP AX, 0
+    JE COPY_DONE
+
+    ; 写入原文件
+    MOV CX, AX
+    MOV AH, 40H
+    MOV BX, HANDLE
+    LEA DX, LINE_BUF
+    INT 21H
+    JC INS_CLOSE_BOTH
+    JMP COPY_LOOP
+
+COPY_DONE:
+    ; 关闭原文件
+    MOV AH, 3EH
+    MOV BX, HANDLE
+    INT 21H
+    ; 关闭临时文件
+    MOV AH, 3EH
+    MOV BX, TMP_HANDLE
+    INT 21H
+
+    ; 删除临时文件
+    MOV AH, 41H
+    LEA DX, TMPNAME
+    INT 21H
+
+    XOR AX, AX
+    CLC
+    JMP INS_CORE_EXIT
+
+; 错误分支：确保所有打开的句柄都关闭
+INS_CLOSE_BOTH:
+    MOV AH, 3EH
+    MOV BX, HANDLE
+    INT 21H
+INS_CLOSE_TMP:
+    MOV AH, 3EH
+    MOV BX, TMP_HANDLE
+    INT 21H
+    JMP INS_ERR_RET
+
+TOO_LONG:
+    MOV AX, 2
+    STC
+    JMP INS_CORE_EXIT
+
+DUP_EXITS:
+    MOV AX, 1
+    STC
+    JMP INS_CORE_EXIT
+
+INS_ERR_RET:
+    MOV AX, 3
+    STC
+
+INS_CORE_EXIT:
+    POP DI
+    POP SI
+    POP DX
+    POP CX
+    POP BX
+    RET
+INSERT_CORE ENDP
+
+INSERT_ENTRY PROC
+    CALL WIN_NEWLINE
+    LEA DX, PROMPT_WORD
+    CALL PRINT
+    LEA SI, WORD_BUF
+    MOV CX, 50
+    CALL WININPUT
+    CMP BYTE PTR [WORD_BUF], 0
+    JE INS_ABORT
+
+    CALL WIN_NEWLINE
+    LEA DX, PROMPT_DEF
+    CALL PRINT
+    LEA SI, DEF_BUF
+    MOV CX, 200
+    CALL WININPUT
+    CMP BYTE PTR [DEF_BUF], 0
+    JE INS_ABORT
+
+    CALL INSERT_CORE
+    JC INS_ERROR
+
+    ; 插入成功
+    CALL WIN_NEWLINE
+    LEA DX, MSG_INSERTED
+    CALL PRINT
+    JMP INS_DONE_PAUSE
+
+INS_ERROR:
+    CALL WIN_NEWLINE
+    CMP AX, 1
+    JE INS_SHOW_EXISTS
+    CMP AX, 2
+    JE INS_SHOW_TOOLONG
+    ; 默认文件错误
+    LEA DX, MSG_ERROR
+    CALL PRINT
+    JMP INS_DONE_PAUSE
+
+INS_SHOW_EXISTS:
+    LEA DX, MSG_EXISTS
+    CALL PRINT
+    JMP INS_DONE_PAUSE
+
+INS_SHOW_TOOLONG:
+    LEA DX, MSG_TOOLONG
+    CALL PRINT
+    JMP INS_DONE_PAUSE
+
+INS_ABORT:
+    JMP INS_DONE
+
+; 有输出结果时暂停，取消输入不暂停
+INS_DONE_PAUSE:
+    CALL WIN_PAUSE
+INS_DONE:
+    RET
+INSERT_ENTRY ENDP
+
+; 前缀搜索
+SEARCH_ENTRY PROC
+    PUSH BP
+    CALL WIN_NEWLINE
+    LEA DX, PROMPT_SEARCH
+    CALL PRINT
+    LEA SI, WORD_BUF
+    MOV CX, 50
+    CALL WININPUT
+    CMP BYTE PTR [WORD_BUF], 0
+    JE SE_DONE
+
+    MOV AH, 3DH
+    MOV AL, 0
+    LEA DX, FNAME
+    INT 21H
+    JC SE_ERR
+    MOV HANDLE, AX
+
+    XOR BP, BP
+SE_READ_LINE:
+    MOV BX, HANDLE
+    CALL READ_LINE
+    CMP AX, 0
+    JE SE_EOF
+
+    LEA SI, LINE_BUF
+    LEA DI, WORD_BUF
+    CALL ISPREFIX
+    JNC SE_NEXT_LINE
+
+    CALL WIN_NEWLINE
+    LEA SI, LINE_BUF
+    CALL PUTSTR0
+    INC BP
+
+SE_NEXT_LINE:
+    JMP SE_READ_LINE
+
+SE_EOF:
+    MOV AH, 3EH
+    MOV BX, HANDLE
+    INT 21H
+    CMP BP, 0
+    JNE SE_DONE
+    CALL WIN_NEWLINE
+    LEA DX, MSG_NOTFOUND
+    CALL PRINT
+    JMP SE_DONE
+
+SE_ERR:
+    CALL WIN_NEWLINE
+    LEA DX, MSG_ERROR
+    CALL PRINT
+SE_DONE:
+    CALL WIN_PAUSE   ; 替换原有重复代码，统一调用通用暂停
+    POP BP
+    RET
+SEARCH_ENTRY ENDP
+
+CREATE_FILE PROC
+    MOV AH, 3CH
+    MOV CX, 0
+    LEA DX, FNAME
+    INT 21H
+    JC CR_ERR
+    MOV HANDLE, AX
+    MOV BX, AX
+    MOV AH, 3EH
+    INT 21H
+    CALL WIN_NEWLINE
+    LEA DX, MSG_CREATED
+    CALL PRINT
+    JMP CR_DONE
+CR_ERR:
+    CALL WIN_NEWLINE
+    LEA DX, MSG_ERROR
+    CALL PRINT
+CR_DONE:
+    CALL WIN_PAUSE   ; 新增暂停，结果可停留查看
+    RET
+CREATE_FILE ENDP
+
+PUTSTR0 PROC
+    PUSH SI
+    MOV AH, 2
+P0_NXT:
+    MOV AL, [SI]
+    CMP AL, 0
+    JE P0_DONE
+    MOV DL, AL
+    INT 21H
+    INC SI
+    JMP P0_NXT
+P0_DONE:
+    POP SI
+    RET
+PUTSTR0 ENDP
+
+SHOW_MENU PROC
+    SCROLL 0, 8, 20, 18, 50, 2FH
+    CURSE 9, 20
+    LEA DX, MENU1
+    CALL PRINT
+    CURSE 10, 20
+    LEA DX, MENU2
+    CALL PRINT
+    CURSE 11, 20
+    LEA DX, MENU3
+    CALL PRINT
+    CURSE 12, 20
+    LEA DX, MENU4
+    CALL PRINT
+    CURSE 18, 20
+    MOV AH, 0
+    INT 16H
+    MOV AH, 0EH
+    INT 10H
+    RET
+SHOW_MENU ENDP
+
+START:
+    MOV AX, @DATA
+    MOV DS, AX
+    MOV ES, AX
+
+    SCROLL 0, 0, 0, 24, 79, 07H
+    SCROLL 0, 7, 19, 19, 51, 50H
+    SCROLL 0, 8, 20, 18, 50, 2FH
+
+    CURSE 18, 20
+
+MAIN:
+    CALL SHOW_MENU
+    CMP AL, '1'
+    JE DO_INSERT
+    CMP AL, '2'
+    JE DO_SEARCH
+    CMP AL, '3'
+    JE EXIT_PROG
+    CMP AL, '4'
+    JE DO_CREATE
+    JMP MAIN
+
+DO_INSERT:
+    CALL INSERT_ENTRY
+    JMP MAIN
+DO_SEARCH:
+    CALL SEARCH_ENTRY
+    JMP MAIN
+DO_CREATE:
+    CALL CREATE_FILE
+    JMP MAIN
+EXIT_PROG:
+    SCROLL 0, 0, 0, 24, 79, 07H
+    MOV AH, 4CH
+    INT 21H
+END START

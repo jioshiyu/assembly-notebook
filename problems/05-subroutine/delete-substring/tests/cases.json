@@ -1,0 +1,8 @@
+[
+  {"input": "ABCDEFGHIJKLMNOPQRST 04 05\n", "expect": "ABCIJKLMNOPQRST\r\n", "note": "作业原题：删掉第 4 位起的 5 个字符（DEFGH）"},
+  {"input": "ABCDEFGHIJKLMNOPQRST 01 01\n", "expect": "BCDEFGHIJKLMNOPQRST\r\n", "note": "删第一个"},
+  {"input": "ABCDEFGHIJKLMNOPQRST 0E 20\n", "expect": "ABCDEFGHIJKLM\r\n", "note": "N=14、M=32 超长：截断到串尾"},
+  {"input": "ABCDEFGHIJKLMNOPQRST 00 05\n", "expect": "ABCDEFGHIJKLMNOPQRST\r\n", "note": "N=0 视为不删"},
+  {"input": "ABCDEFGHIJKLMNOPQRST 13 05\n", "expect": "ABCDEFGHIJKLMNOPQR\r\n", "note": "删第 19 位起的 2 个（S,T）：M 被截断"},
+  {"input": "AAAA 02 02\n", "expect": "AA\r\n", "note": "删中间"}
+]

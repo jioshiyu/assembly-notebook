@@ -1,0 +1,5 @@
+[
+  {"input": "THIS_IS_A_TEST\n", "expect": "THIS_IS_A_TEST\r\n", "note": "作业原题内容（去掉 '!' 结束符）"},
+  {"input": "A\n", "expect": "A\r\n"},
+  {"input": "HELLO_WORLD\n", "expect": "HELLO_WORLD\r\n"}
+]

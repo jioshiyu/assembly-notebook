@@ -1,0 +1,6 @@
+[
+  {"input": "1234 00FF\n", "expect": "AND=0034H\r\nOR=12FFH\r\nXOR=12CBH\r\nTEST=1234H\r\n", "note": "作业原题数据"},
+  {"input": "0000 0000\n", "expect": "AND=0000H\r\nOR=0000H\r\nXOR=0000H\r\nTEST=0000H\r\n"},
+  {"input": "FFFF FFFF\n", "expect": "AND=FFFFH\r\nOR=FFFFH\r\nXOR=0000H\r\nTEST=FFFFH\r\n"},
+  {"input": "AAAA 5555\n", "expect": "AND=0000H\r\nOR=FFFFH\r\nXOR=FFFFH\r\nTEST=AAAAH\r\n"}
+]

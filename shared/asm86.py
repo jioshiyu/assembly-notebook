@@ -395,7 +395,7 @@ class CPU:
         os_ = self.os
         if ah == 0x00:
             os_.clear()
-        elif ah in (0x01, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0F, 0x13):
+        elif ah in (0x01, 0x02, 0x03, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0E, 0x0F, 0x13):
             if ah in (0x06, 0x07):
                 top = self.get8("CH")
                 left = self.get8("CL")
@@ -548,6 +548,9 @@ class CPU:
             else:
                 v = self.sub_(self.r(reg), 1, 2)
             self.setr(reg, v)
+        elif op in (0x6A, 0x68):  # PUSH imm8 / imm16（80186+，fasm 常这么编）
+            imm = self.fetch_s8() & 0xFFFF if op == 0x6A else self.fetch16()
+            self.stack_push(imm)
         elif 0x50 <= op <= 0x57:
             self.stack_push(self.r_[R16[op & 7]])
         elif 0x58 <= op <= 0x5F:
@@ -718,6 +721,9 @@ class CPU:
             v = self._shift(reg, v, cnt, size)
             self.szp(v, size)
             self._put(mod, rm, addr, size, v)
+        elif op == 0xD7:  # XLAT/XLATB：AL = [BX+AL]
+            seg = self.sreg[self.seg_override] if self.seg_override else self.sreg["DS"]
+            self.set8("AL", self.mem[self.phys(seg, (self.r_["BX"] + self.get8("AL")) & 0xFFFF)])
         elif op == 0x98:  # cbw
             al = self.get8("AL")
             self.setr("AX", al - 0x100 if al & 0x80 else al)
@@ -725,6 +731,17 @@ class CPU:
             self.setr("DX", 0xFFFF if self.r_["AX"] & 0x8000 else 0)
         elif op in (0xA4, 0xA5, 0xA6, 0xA7, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF):
             self._string(op)
+        elif op == 0x0F:  # 80186+ 的两个字节指令：Jcc rel16 与 SETcc r/m8
+            sub = self.fetch8()
+            if 0x80 <= sub <= 0x8F:
+                rel = self.fetch_s16()
+                if COND[sub & 0xF](self.f):
+                    self.ip = (self.ip + rel) & 0xFFFF
+            elif 0x90 <= sub <= 0x9F:
+                mod, _reg, rm, addr = self.modrm()
+                self._put(mod, rm, addr, 1, 1 if COND[sub & 0xF](self.f) else 0)
+            else:
+                raise Abort(f"未实现的 0F {sub:02X} 指令（80186+ 扩展）")
         elif 0x70 <= op <= 0x7F:
             rel = self.fetch_s8()
             if COND[op & 0xF](self.f):
@@ -906,6 +923,8 @@ class CPU:
         size = 1 if op in (0xA4, 0xA6, 0xAA, 0xAC, 0xAE) else 2
         delta = -1 if self.f["DF"] else 1
         seg_src = self.seg_override or "DS"
+        if self.rep and self.r_["CX"] == 0:
+            return              # REP 前缀 + CX=0：一次都不做（容易漏的关键语义）
         while True:
             si = self.r_["SI"]
             di = self.r_["DI"]
