@@ -4,6 +4,8 @@
 
 8086 汇编课程作业整理：把散落在桌面的 8 个实验、21 个 `.asm` 变成**可编译、可执行、可对拍、可复现**的项目。
 
+> 设计取舍（为什么自研模拟器/为什么三重对拍/测试边界）：[DESIGN.md](DESIGN.md) · 许可：[MIT](LICENSE)
+>
 > 姊妹仓库：[algorithm-notebook](https://github.com/jioshiyu/algorithm-notebook)（算法题，有编译器当 oracle）——同一套方法论：一题一目录、参考模型当 oracle、随机对拍、方法沉淀；两者合起来是 `*-notebook` 系列，方法论见 workbench 的《题解仓库族》。
 > 区别在于汇编没有现成的"编译器 + 标准输出"——所以这里自带一个 **8086 模拟器**（`shared/asm86.py`）和一套 **DOS IO 例程**（`shared/io.inc`）。
 
