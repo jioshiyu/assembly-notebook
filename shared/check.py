@@ -20,6 +20,7 @@ import argparse
 import importlib.util
 import json
 import random
+import re
 import sys
 from pathlib import Path
 
@@ -110,10 +111,92 @@ def run_one(prob: Path, stress: int, verbose: bool) -> dict:
             "icount": icount, "cycles": cycles, "cases": len(cases)}
 
 
+MUTATIONS = [
+    (r"\badd\b", "sub"), (r"\bsub\b", "add"),
+    (r"\binc\b", "dec"), (r"\bdec\b", "inc"),
+    (r"\bje\b", "jne"), (r"\bjne\b", "je"),
+    (r"\bjl\b", "jge"), (r"\bjge\b", "jl"),
+    (r"\bjle\b", "jg"), (r"\bjg\b", "jle"),
+    (r"\bjbe\b", "ja"), (r"\bja\b", "jbe"),
+    (r"\bjb\b", "jae"), (r"\bjae\b", "jb"),
+]
+
+
+def make_mutants(text: str, limit: int):
+    """按行做单点替换，产出 (行号, 原文, 变异文) 列表。"""
+    out = []
+    lines = text.split("\n")
+    for lineno, line in enumerate(lines, 1):
+        code = line.split(";", 1)[0]
+        for pat, rep in MUTATIONS:
+            m = re.search(pat, code)
+            if not m:
+                continue
+            new_line = line[:m.start()] + rep + line[m.end():]
+            out.append((lineno, line.strip(), new_line.strip(), list(lines)))
+            break                                  # 每行最多一个变异
+        if len(out) >= limit:
+            break
+    return out
+
+
+def mutate(prob: Path, limit: int) -> dict:
+    """变异测试：故意改坏 main.asm，看固定用例能不能抓到。
+
+    抓不到（survived）= 测试有盲区，比"全部 PASS"更值得看。
+    """
+    name = str(prob.relative_to(ROOT / "problems"))
+    src = (prob / "main.asm").read_text(encoding="utf-8")
+    binp = BUILD / (prob.parent.name + "__" + prob.name + ".bin")
+    ok, log = fasm.assemble(prob / "main.asm", binp)
+    if not ok:
+        return {"name": name, "error": "原文件编译失败"}
+    base = binp.read_bytes()
+    cases = json.loads((prob / "tests" / "cases.json").read_text(encoding="utf-8"))
+    baseline = []
+    for case in cases:
+        res = asm86.run_program(base, case.get("input", ""))
+        baseline.append((res["stdout"], res["screen"], res["files"]))
+
+    muts = make_mutants(src, limit)
+    killed_c = killed_o = survived = 0
+    survivors = []
+    for idx, (lineno, old, new_line, lines) in enumerate(muts):
+        lines2 = list(lines)
+        lines2[lineno - 1] = new_line
+        mp = BUILD / f"mut_{prob.name}_{idx}.asm"
+        mp.write_text("\n".join(lines2), encoding="utf-8", newline="\n")
+        mb = BUILD / f"mut_{prob.name}_{idx}.bin"
+        ok2, _ = fasm.assemble(mp, mb)
+        if not ok2:
+            killed_c += 1                          # 编译期就被拒：算杀死（弱证据）
+            continue
+        data2 = mb.read_bytes()
+        caught = False
+        for case, base_out in zip(cases, baseline):
+            res = asm86.run_program(data2, case.get("input", ""))
+            if res["error"] and not any(baseline):
+                caught = True
+                break
+            if (res["stdout"], res["screen"], res["files"]) != base_out:
+                caught = True
+                break
+        if caught:
+            killed_o += 1
+        else:
+            survived += 1
+            survivors.append(f"L{lineno}: {old[:60]} → {new_line[:60]}")
+    total = len(muts)
+    return {"name": name, "total": total, "killed_compile": killed_c,
+            "killed_output": killed_o, "survived": survived, "survivors": survivors}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("paths", nargs="*")
     ap.add_argument("--stress", type=int, default=0, help="每题随机对拍次数")
+    ap.add_argument("--mutate", type=int, default=0,
+                    help="变异测试：每道题故意改坏 N 处，看用例能不能抓到")
     ap.add_argument("--quiet", action="store_true")
     ns = ap.parse_args(argv)
 
@@ -122,6 +205,24 @@ def main(argv=None):
         print("没有找到任何 problems/*/*/main.asm")
         return 2
     BUILD.mkdir(parents=True, exist_ok=True)
+    if ns.mutate:
+        total = killed = survived = 0
+        for prob in probs:
+            r = mutate(prob, ns.mutate)
+            if r.get("error"):
+                print(f"MUT {r['name']}: {r['error']}")
+                continue
+            total += r["total"]
+            killed += r["killed_compile"] + r["killed_output"]
+            survived += r["survived"]
+            flag = "OK " if r["survived"] == 0 else "GAP"
+            print(f"{flag} {r['name']:<44} 变异={r['total']:<3} "
+                  f"被杀={r['killed_compile']}+{r['killed_output']:<3} 逃逸={r['survived']}")
+            for s in r["survivors"][:3]:
+                print("      逃逸：", s)
+        print(f"\n变异总数 {total}，被杀 {killed}，逃逸 {survived} "
+              f"（逃逸=测试盲区，不是程序 bug）")
+        return 0
     bad = 0
     for prob in probs:
         r = run_one(prob, ns.stress, not ns.quiet)

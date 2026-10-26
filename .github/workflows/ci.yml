@@ -18,3 +18,9 @@ jobs:
         run: python shared/check.py
       - name: Random stress (30 rounds each)
         run: python shared/check.py --stress 30
+      - name: Mutation testing (tests must catch the bugs)
+        run: python shared/check.py --mutate 4
+      - name: Install unicorn (independent oracle)
+        run: python -m pip install --disable-pip-version-check unicorn
+      - name: Cross-check with Unicorn Engine
+        run: python shared/oracle_unicorn.py

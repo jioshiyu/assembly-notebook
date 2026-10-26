@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 *.log
 _scratch/
+_vendor/

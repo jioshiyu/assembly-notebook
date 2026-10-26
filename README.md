@@ -83,13 +83,17 @@ python shared/screen_png.py problems/07-io/window-notepad     --input $'HELLO 80
 
 每个题目录里都有 `README.md`（题意 / 原版做法 / 重写点 / 关键指令 / 测试边界 / 复现命令），从 [docs/problems.md 的目录索引](docs/problems.md) 可以直接跳进去。
 
-## 质检三个层次
+## 质检四层（"谁来验证验证器"）
 
-1. **固定用例**：`tests/cases.json`，覆盖作业原题数值 + 边界（0、最大值、进位、回绕）；
-2. **随机对拍**：`--stress N`，随机输入跑汇编 vs Python 参考模型，不一致即失败；
-3. **交叉校验**：用例里的 `expect` 与 `ref.py` 独立写，两者不一致说明**至少有一个错**（已抓到 3 处自己写错的期望值）。
+| 层 | 命令 | 防什么 |
+|---|---|---|
+| 1 固定用例 | `python shared/check.py` | 改坏了最基本的语义 |
+| 2 随机对拍 | `--stress 40` | 边界与组合没覆盖到 |
+| 3 **变异测试** | `--mutate 4` | 用例根本抓不到 bug（逃逸=测试盲区） |
+| 4 **外部 oracle** | `python shared/oracle_unicorn.py` | **自研模拟器自己跑偏**（用独立的 Unicorn Engine 跑同一份机器码比寄存器终态） |
 
-任何一层失败都会打印 `input=... → 实际 vs 期望`，退出码非 0。
+第 3、4 层是回答"自己写题自己验证=自我欺骗"的：变异测试证明用例有牙，Unicorn 是别人写的
+CPU 模拟器，两边跑出同样的 stdout 和寄存器终态，才说明我们的解释器没跑偏。
 
 ## 模拟器支持范围
 
